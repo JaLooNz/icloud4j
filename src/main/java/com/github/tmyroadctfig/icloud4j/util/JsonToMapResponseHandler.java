@@ -36,7 +36,7 @@ import java.util.Map;
  * @author Nick DS (me@nickdsantos.com)
  * @author Luke Quinane
  */
-public class JsonToMapResponseHandler implements HttpClientResponseHandler<Map<String,Object>>
+public class JsonToMapResponseHandler implements HttpClientResponseHandler<Map<String, Object>>
 {
     /**
      * The logger.
@@ -48,14 +48,17 @@ public class JsonToMapResponseHandler implements HttpClientResponseHandler<Map<S
     {
         int statusCode = response.getCode();
         String reason = response.getReasonPhrase();
-        if (logger.isDebugEnabled()) {
+        if (logger.isDebugEnabled())
+        {
             logger.debug("code: {} ; reason: {}", statusCode, reason);
         }
 
         HttpEntity respEntity = response.getEntity();
-        if (respEntity != null) {
+        if (respEntity != null)
+        {
             Gson gson = new GsonBuilder().create();
-            try (Reader reader = new InputStreamReader(respEntity.getContent(), StandardCharsets.UTF_8)) {
+            try (Reader reader = new InputStreamReader(respEntity.getContent(), StandardCharsets.UTF_8))
+            {
                 return gson.fromJson(reader, Map.class);
             }
         }

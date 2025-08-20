@@ -19,14 +19,16 @@ import java.util.stream.Collectors;
 /**
  * Access to the iCloud Photos service.
  */
-public class PhotosService {
+public class PhotosService
+{
 
     private final ICloudService iCloudService;
     private final String serviceRoot;
     private final String endPoint;
     private final String syncToken;
 
-    public PhotosService(ICloudService iCloudService) {
+    public PhotosService(ICloudService iCloudService)
+    {
         this.iCloudService = iCloudService;
         Map<String, Object> photosSettings = (Map<String, Object>) iCloudService.getWebServicesMap().get("photos");
         serviceRoot = (String) photosSettings.get("url");
@@ -36,8 +38,10 @@ public class PhotosService {
         syncToken = getSyncToken();
     }
 
-    private String getSyncToken() {
-        try {
+    private String getSyncToken()
+    {
+        try
+        {
             URIBuilder uriBuilder = new URIBuilder(endPoint + "/startup");
             iCloudService.populateUriParameters(uriBuilder);
             HttpGet httpGet = new HttpGet(uriBuilder.build());
@@ -46,16 +50,21 @@ public class PhotosService {
             HttpClientResponseHandler<String> handler = new StringResponseHandler();
             String rawResponse = iCloudService.getHttpClient().execute(httpGet, handler);
 
-            Type type = new TypeToken<Map<String, String>>(){}.getType();
+            Type type = new TypeToken<Map<String, String>>()
+            {
+            }.getType();
             Map<String, Object> responseMap = new Gson().fromJson(rawResponse, type);
 
             return (String) responseMap.get("syncToken");
-        } catch (Exception e) {
-            throw Throwables.propagate(e);
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException(e);
         }
     }
 
-    public void populateUriParameters(URIBuilder uriBuilder) {
+    public void populateUriParameters(URIBuilder uriBuilder)
+    {
         uriBuilder
             .addParameter("dsid", iCloudService.getSessionId())
             .addParameter("clientBuildNumber", "14E45")
@@ -63,7 +72,8 @@ public class PhotosService {
             .addParameter("syncToken", syncToken);
     }
 
-    public PhotosFolder getAllPhotosAlbum() {
+    public PhotosFolder getAllPhotosAlbum()
+    {
         return getAlbums()
             .stream()
             .filter(folder -> "all-photos".equals(folder.serverId))
@@ -71,8 +81,10 @@ public class PhotosService {
             .orElse(null);
     }
 
-    public List<PhotosFolder> getAlbums() {
-        try {
+    public List<PhotosFolder> getAlbums()
+    {
+        try
+        {
             URIBuilder uriBuilder = new URIBuilder(endPoint + "/folders");
             populateUriParameters(uriBuilder);
             HttpGet httpGet = new HttpGet(uriBuilder.build());
@@ -86,8 +98,10 @@ public class PhotosService {
             return Arrays.stream(photosAlbumsResponse.folders)
                 .filter(folder -> "album".equals(folder.type))
                 .collect(Collectors.toList());
-        } catch (Exception e) {
-            throw Throwables.propagate(e);
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException(e);
         }
     }
 }

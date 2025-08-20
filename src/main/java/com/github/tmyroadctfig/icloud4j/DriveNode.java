@@ -23,6 +23,9 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.IOUtils;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.cookie.Cookie;
+import org.apache.hc.core5.net.URIBuilder;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -30,10 +33,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.apache.hc.client5.http.classic.methods.HttpGet;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
-import org.apache.hc.client5.http.cookie.Cookie;
-import org.apache.hc.core5.net.URIBuilder;
 
 /**
  * A node in the iCloud Drive service.
@@ -71,9 +70,9 @@ public class DriveNode
      * Creates a new node.
      *
      * @param iCloudService the iCloud service.
-     * @param driveService the service reference.
-     * @param id the ID.
-     * @param nodeDetails the node details.
+     * @param driveService  the service reference.
+     * @param id            the ID.
+     * @param nodeDetails   the node details.
      */
     public DriveNode(ICloudService iCloudService, DriveService driveService, String id, DriveNodeDetails nodeDetails)
     {
@@ -97,8 +96,7 @@ public class DriveNode
         {
             String urlString = url.get();
             downloadUrlToken = urlString.substring(urlString.indexOf("t=") + 2);
-        }
-        else
+        } else
         {
             downloadUrlToken = "";
         }
@@ -119,8 +117,10 @@ public class DriveNode
      *
      * @param outputStream the output stream to write to.
      */
-    public void downloadFileData(OutputStream outputStream) {
-        try {
+    public void downloadFileData(OutputStream outputStream)
+    {
+        try
+        {
             // Build the content URL lookup URI
             URIBuilder uriBuilder = new URIBuilder(
                 String.format("%s/ws/%s/download/by_id", driveService.getDocsServiceUrl(), nodeDetails.zone)
@@ -148,14 +148,17 @@ public class DriveNode
             iCloudService.populateRequestHeadersParameters(contentRequest);
 
             iCloudService.getHttpClient().execute(contentRequest, response -> {
-                try (InputStream inputStream = response.getEntity().getContent()) {
+                try (InputStream inputStream = response.getEntity().getContent())
+                {
                     IOUtils.copyLarge(inputStream, outputStream, new byte[0x10000]);
                 }
                 return null; // HttpClientResponseHandler requires a return type
             });
 
-        } catch (Exception e) {
-            throw Throwables.propagate(e);
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException(e);
         }
     }
 

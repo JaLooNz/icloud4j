@@ -28,13 +28,17 @@ import java.nio.charset.StandardCharsets;
 /**
  * A response handler which returns the response content as a string.
  */
-public class StringResponseHandler implements HttpClientResponseHandler<String> {
+public class StringResponseHandler implements HttpClientResponseHandler<String>
+{
 
     @Override
-    public String handleResponse(ClassicHttpResponse response) throws IOException {
+    public String handleResponse(ClassicHttpResponse response) throws IOException
+    {
         HttpEntity respEntity = response.getEntity();
-        if (respEntity != null) {
-            try (Reader reader = new InputStreamReader(respEntity.getContent(), StandardCharsets.UTF_8)) {
+        if (respEntity != null)
+        {
+            try (Reader reader = new InputStreamReader(respEntity.getContent(), StandardCharsets.UTF_8))
+            {
                 return CharStreams.toString(reader);
             }
         }

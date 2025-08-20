@@ -4,25 +4,24 @@ import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
-import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.io.HttpClientResponseHandler;
 import org.apache.hc.core5.http.io.entity.StringEntity;
-import org.apache.hc.core5.http.ClassicHttpResponse;
 import org.apache.hc.core5.http.message.StatusLine;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
  * A wrapper for the 'idmsa' service.
  */
-public class IdmsaService {
+public class IdmsaService
+{
 
     public static final String idmsaEndPoint = "https://idmsa.apple.com";
     public static final String idmsaAuthEndPoint = "https://idmsa.apple.com/appleauth/auth";
@@ -34,13 +33,16 @@ public class IdmsaService {
     private String authToken;
     private String trustToken;
 
-    public IdmsaService(ICloudService iCloudService) {
+    public IdmsaService(ICloudService iCloudService)
+    {
         this.iCloudService = iCloudService;
         this.httpClient = iCloudService.getHttpClient();
     }
 
-    public StatusLine authenticateViaIdmsa(@Nonnull String username, @Nonnull char[] password) {
-        try {
+    public StatusLine authenticateViaIdmsa(@Nonnull String username, @Nonnull char[] password)
+    {
+        try
+        {
             Map<String, Object> params = ImmutableMap.of(
                 "accountName", username,
                 "password", new String(password),
@@ -68,12 +70,15 @@ public class IdmsaService {
 
             return httpClient.execute(post, handler);
 
-        } catch (Exception e) {
-            throw Throwables.propagate(e);
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException(e);
         }
     }
 
-    private String sendIdmsaCode(String code) throws IOException {
+    private String sendIdmsaCode(String code) throws IOException
+    {
         String json = String.format("{\"securityCode\":{\"code\":\"%s\"}}", code);
         HttpPost post = new HttpPost(idmsaAuthEndPoint + "/verify/trusteddevice/securitycode");
         post.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
@@ -89,7 +94,8 @@ public class IdmsaService {
         return httpClient.execute(post, handler);
     }
 
-    private String retrieveTrustToken() throws IOException {
+    private String retrieveTrustToken() throws IOException
+    {
         HttpGet get = new HttpGet(idmsaAuthEndPoint + "/2sv/trust");
         populateIdmsaRequestHeadersParameters(get);
 
@@ -102,8 +108,10 @@ public class IdmsaService {
         return httpClient.execute(get, handler);
     }
 
-    public void validateAutomaticVerificationCode(String code) {
-        try {
+    public void validateAutomaticVerificationCode(String code)
+    {
+        try
+        {
             authToken = sendIdmsaCode(code);
             trustToken = retrieveTrustToken();
 
@@ -113,12 +121,15 @@ public class IdmsaService {
                 "extended_login", false
             );
             iCloudService.authenticate(params);
-        } catch (Exception e) {
-            throw Throwables.propagate(e);
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException(e);
         }
     }
 
-    public void populateIdmsaRequestHeadersParameters(org.apache.hc.core5.http.ClassicHttpRequest request) {
+    public void populateIdmsaRequestHeadersParameters(org.apache.hc.core5.http.ClassicHttpRequest request)
+    {
         request.setHeader("Origin", idmsaEndPoint);
         request.setHeader("Referer", idmsaEndPoint + "/");
         request.setHeader("User-Agent", "Mozilla/5.0 (iPad; CPU OS 9_3_4 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13G35 Safari/601.1");
@@ -130,6 +141,13 @@ public class IdmsaService {
             request.setHeader("scnt", scnt);
     }
 
-    public String getAuthToken() { return authToken; }
-    public String getTrustToken() { return trustToken; }
+    public String getAuthToken()
+    {
+        return authToken;
+    }
+
+    public String getTrustToken()
+    {
+        return trustToken;
+    }
 }

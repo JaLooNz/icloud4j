@@ -16,26 +16,34 @@ import java.util.Map;
 /**
  * iCloud utilities.
  */
-public class ICloudUtils {
+public class ICloudUtils
+{
 
     private static final Gson gson = new Gson();
 
     /**
      * Parses a JSON response from a POST request.
      */
-    public static <T> T parseJsonResponse(CloseableHttpClient httpClient, HttpPost post, Class<T> responseClass) {
-        try {
+    public static <T> T parseJsonResponse(CloseableHttpClient httpClient, HttpPost post, Class<T> responseClass)
+    {
+        try
+        {
             return httpClient.execute(post, (ClassicHttpResponse response) -> {
                 String rawResponseContent = new StringResponseHandler().handleResponse(response);
 
-                try {
+                try
+                {
                     return gson.fromJson(rawResponseContent, responseClass);
-                } catch (JsonSyntaxException e) {
+                }
+                catch (JsonSyntaxException e)
+                {
                     Map<String, Object> errorMap = gson.fromJson(rawResponseContent, Map.class);
                     throw new ICloudException(response, errorMap);
                 }
             });
-        } catch (IOException e) {
+        }
+        catch (IOException e)
+        {
             throw new UncheckedIOException(e);
         }
     }
@@ -43,19 +51,26 @@ public class ICloudUtils {
     /**
      * Parses a JSON response from a GET request.
      */
-    public static <T> T parseJsonResponse(CloseableHttpClient httpClient, HttpGet get, Class<T> responseClass) {
-        try {
+    public static <T> T parseJsonResponse(CloseableHttpClient httpClient, HttpGet get, Class<T> responseClass)
+    {
+        try
+        {
             return httpClient.execute(get, (ClassicHttpResponse response) -> {
                 String rawResponseContent = new StringResponseHandler().handleResponse(response);
 
-                try {
+                try
+                {
                     return gson.fromJson(rawResponseContent, responseClass);
-                } catch (JsonSyntaxException e) {
+                }
+                catch (JsonSyntaxException e)
+                {
                     Map<String, Object> errorMap = gson.fromJson(rawResponseContent, Map.class);
                     throw new ICloudException(response, errorMap);
                 }
             });
-        } catch (IOException e) {
+        }
+        catch (IOException e)
+        {
             throw new UncheckedIOException(e);
         }
     }
@@ -65,10 +80,14 @@ public class ICloudUtils {
      * Executes a GET request and returns the response body as an InputStream.
      * Caller is responsible for closing the InputStream.
      */
-    public static InputStream executeStream(CloseableHttpClient client, HttpGet get) {
-        try {
+    public static InputStream executeStream(CloseableHttpClient client, HttpGet get)
+    {
+        try
+        {
             return client.execute(get, response -> response.getEntity().getContent());
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             throw new RuntimeException("Failed to execute HTTP GET for stream", e);
         }
     }

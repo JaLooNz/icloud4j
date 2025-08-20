@@ -22,17 +22,14 @@ import com.github.tmyroadctfig.icloud4j.json.TrustedDevices;
 import com.github.tmyroadctfig.icloud4j.util.JsonToMapResponseHandler;
 import com.github.tmyroadctfig.icloud4j.util.StringResponseHandler;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
-import org.apache.commons.io.Charsets;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
 import org.apache.hc.client5.http.cookie.BasicCookieStore;
 import org.apache.hc.client5.http.cookie.CookieStore;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
@@ -60,30 +57,25 @@ import java.util.Map;
 public class ICloudService implements java.io.Closeable
 {
     /**
-     * A flag indicating whether to disable SSL checks.
-     */
-    private static final boolean DISABLE_SSL_CHECKS = Boolean.parseBoolean(System.getProperty("tmyroadctfig.icloud4j.disableSslChecks", "false"));
-
-    /**
-     * The proxy host to use.
-     */
-    private static final String PROXY_HOST = System.getProperty("http.proxyHost");
-
-    /**
-     * The proxy port to use.
-     */
-    private static final Integer PROXY_PORT = Integer.getInteger("http.proxyPort");
-
-    /**
      * The end point.
      */
     public static final String endPoint = "https://www.icloud.com";
-
     /**
      * The setup end point.
      */
     public static final String setupEndPoint = "https://setup.icloud.com/setup/ws/1";
-
+    /**
+     * A flag indicating whether to disable SSL checks.
+     */
+    private static final boolean DISABLE_SSL_CHECKS = Boolean.parseBoolean(System.getProperty("tmyroadctfig.icloud4j.disableSslChecks", "false"));
+    /**
+     * The proxy host to use.
+     */
+    private static final String PROXY_HOST = System.getProperty("http.proxyHost");
+    /**
+     * The proxy port to use.
+     */
+    private static final Integer PROXY_PORT = Integer.getInteger("http.proxyPort");
     /**
      * The client ID.
      */
@@ -130,25 +122,31 @@ public class ICloudService implements java.io.Closeable
      * @param clientId   the client ID.
      * @param httpClient the closeable http client.
      */
-    public ICloudService(@Nonnull String clientId, @Nullable CloseableHttpClient httpClient) {
+    public ICloudService(@Nonnull String clientId, @Nullable CloseableHttpClient httpClient)
+    {
         this.clientId = clientId;
 
         cookieStore = new BasicCookieStore();
 
-        if (httpClient != null) {
+        if (httpClient != null)
+        {
             this.httpClient = httpClient;
-        } else {
-            try {
+        } else
+        {
+            try
+            {
                 HttpClientBuilder clientBuilder = HttpClients.custom()
                     .setDefaultCookieStore(cookieStore);
 
                 // Handle proxy if defined
-                if (!Strings.isNullOrEmpty(PROXY_HOST) && PROXY_PORT != null) {
+                if (!Strings.isNullOrEmpty(PROXY_HOST) && PROXY_PORT != null)
+                {
                     clientBuilder.setProxy(new HttpHost(PROXY_HOST, PROXY_PORT));
                 }
 
                 // Handle optional SSL checks
-                if (DISABLE_SSL_CHECKS) {
+                if (DISABLE_SSL_CHECKS)
+                {
                     SSLContext sslContext = SSLContextBuilder.create()
                         .loadTrustMaterial(null, (chain, authType) -> true) // trust all
                         .build();
@@ -162,8 +160,10 @@ public class ICloudService implements java.io.Closeable
                 }
 
                 this.httpClient = clientBuilder.build();
-            } catch (Exception e) {
-                throw Throwables.propagate(e);
+            }
+            catch (Exception e)
+            {
+                throw new RuntimeException(e);
             }
         }
 
@@ -205,26 +205,28 @@ public class ICloudService implements java.io.Closeable
             post.setEntity(new StringEntity(new Gson().toJson(params), StandardCharsets.UTF_8));
             populateRequestHeadersParameters(post);
 
-            try (CloseableHttpResponse response = httpClient.execute(post))
+            Map<String, Object> result = httpClient.execute(post, new JsonToMapResponseHandler());
+            if (result == null)
             {
-                Map<String, Object> result = new JsonToMapResponseHandler().handleResponse(response);
-                if (Boolean.FALSE.equals(result.get("success")))
-                {
-                    throw new RuntimeException("Failed to log into iCloud: " + result.get("error"));
-                }
-
-                loginInfo = result;
-
-                // Grab the session ID
-                Map<String, Object> dsInfoMap = (Map<String, Object>) result.get("dsInfo");
-                dsid = (String) dsInfoMap.get("dsid");
-
-                return loginInfo;
+                throw new RuntimeException("Failed to log into iCloud");
             }
+
+            if (Boolean.FALSE.equals(result.get("success")))
+            {
+                throw new RuntimeException("Failed to log into iCloud: " + result.get("error"));
+            }
+
+            loginInfo = result;
+
+            // Grab the session ID
+            Map<String, Object> dsInfoMap = (Map<String, Object>) result.get("dsInfo");
+            dsid = (String) dsInfoMap.get("dsid");
+
+            return loginInfo;
         }
         catch (Exception e)
         {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -254,16 +256,19 @@ public class ICloudService implements java.io.Closeable
             HttpGet httpGet = new HttpGet(uri);
             populateRequestHeadersParameters(httpGet);
 
-            try (CloseableHttpResponse response = httpClient.execute(httpGet))
+            String result = httpClient.execute(httpGet, new StringResponseHandler());
+            if (result == null)
             {
-                TrustedDevices trustedDevices = new Gson().fromJson(new StringResponseHandler().handleResponse(response), TrustedDevices.class);
-
-                return Arrays.asList(trustedDevices.devices);
+                throw new RuntimeException("Failed to get trusted devices");
             }
+
+            TrustedDevices trustedDevices = new Gson().fromJson(result, TrustedDevices.class);
+
+            return Arrays.asList(trustedDevices.devices);
         }
         catch (Exception e)
         {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -297,7 +302,7 @@ public class ICloudService implements java.io.Closeable
         }
         catch (Exception e)
         {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -348,7 +353,7 @@ public class ICloudService implements java.io.Closeable
         }
         catch (Exception e)
         {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -368,20 +373,22 @@ public class ICloudService implements java.io.Closeable
             HttpPost post = new HttpPost(uri);
             populateRequestHeadersParameters(post);
 
-            try (CloseableHttpResponse response = httpClient.execute(post))
+            Map<String, Object> result = httpClient.execute(post, new JsonToMapResponseHandler());
+            if (result == null)
             {
-                Map<String, Object> result = new JsonToMapResponseHandler().handleResponse(response);
-                if (Boolean.FALSE.equals(result.get("success")))
-                {
-                    throw new RuntimeException("Failed to get storage usage info: " + result.get("error"));
-                }
-
-                return result;
+                throw new RuntimeException("Failed to get storage usage info");
             }
+
+            if (Boolean.FALSE.equals(result.get("success")))
+            {
+                throw new RuntimeException("Failed to get storage usage info: " + result.get("error"));
+            }
+
+            return result;
         }
         catch (Exception e)
         {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
