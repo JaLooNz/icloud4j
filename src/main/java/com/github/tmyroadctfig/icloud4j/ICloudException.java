@@ -17,9 +17,9 @@
 package com.github.tmyroadctfig.icloud4j;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.StatusLine;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpResponse;
+import org.apache.hc.core5.http.message.StatusLine;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -56,9 +56,9 @@ public class ICloudException extends RuntimeException
     public ICloudException(HttpResponse response, Map<String, Object> errorMap)
     {
         this.errorMap = ImmutableMap.copyOf(errorMap);
-        this.statusLine = response.getStatusLine();
+        this.statusLine = new StatusLine(response);
         this.headers = Arrays
-            .stream(response.getAllHeaders())
+            .stream(response.getHeaders())
             .collect(Collectors.toMap(Header::getName, Header::getValue));
     }
 

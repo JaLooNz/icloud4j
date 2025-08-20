@@ -21,7 +21,7 @@ import com.github.tmyroadctfig.icloud4j.json.UbiquityNodeDetails;
 import com.github.tmyroadctfig.icloud4j.util.ICloudUtils;
 import com.google.common.base.Throwables;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
 
 import java.io.InputStream;
 import java.io.OutputStream;

@@ -20,11 +20,12 @@ import com.github.tmyroadctfig.icloud4j.json.AppleDevice;
 import com.github.tmyroadctfig.icloud4j.json.FindMyIPhoneResponse;
 import com.github.tmyroadctfig.icloud4j.util.ICloudUtils;
 import com.google.common.base.Throwables;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.entity.StringEntity;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.net.URIBuilder;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -87,7 +88,7 @@ public class FindMyIPhoneService
             String requestJson = "{\"clientContext\": {\"fmly\": true, \"shouldLocate\": true, \"selectedDevice\": \"all\"}}";
 
             HttpPost post = new HttpPost(uri);
-            post.setEntity(new StringEntity(requestJson, null, "UTF-8"));
+            post.setEntity(new StringEntity(requestJson, StandardCharsets.UTF_8));
             iCloudService.populateRequestHeadersParameters(post);
 
             FindMyIPhoneResponse findMyIPhoneResponse =

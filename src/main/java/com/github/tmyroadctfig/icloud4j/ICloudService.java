@@ -25,25 +25,29 @@ import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
-import org.apache.http.Consts;
-import org.apache.http.HttpHost;
-import org.apache.http.client.CookieStore;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.BasicCookieStore;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.ssl.SSLContextBuilder;
+import org.apache.commons.io.Charsets;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
+import org.apache.hc.client5.http.cookie.BasicCookieStore;
+import org.apache.hc.client5.http.cookie.CookieStore;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder;
+import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.net.URIBuilder;
+import org.apache.hc.core5.ssl.SSLContextBuilder;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -123,45 +127,42 @@ public class ICloudService implements java.io.Closeable
     /**
      * Creates a new iCloud service instance.
      *
-     * @param clientId the client ID.
+     * @param clientId   the client ID.
      * @param httpClient the closeable http client.
      */
-    public ICloudService(@Nonnull String clientId, @Nullable CloseableHttpClient httpClient)
-    {
+    public ICloudService(@Nonnull String clientId, @Nullable CloseableHttpClient httpClient) {
         this.clientId = clientId;
 
         cookieStore = new BasicCookieStore();
 
-        if (httpClient != null)
-        {
+        if (httpClient != null) {
             this.httpClient = httpClient;
-        }
-        else
-        {
-            try
-            {
-                HttpClientBuilder clientBuilder = HttpClientBuilder
-                    .create()
+        } else {
+            try {
+                HttpClientBuilder clientBuilder = HttpClients.custom()
                     .setDefaultCookieStore(cookieStore);
 
-                if (!Strings.isNullOrEmpty(PROXY_HOST))
-                {
+                // Handle proxy if defined
+                if (!Strings.isNullOrEmpty(PROXY_HOST) && PROXY_PORT != null) {
                     clientBuilder.setProxy(new HttpHost(PROXY_HOST, PROXY_PORT));
                 }
 
-                if (DISABLE_SSL_CHECKS)
-                {
-                    clientBuilder
-                        .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
-                        .setSslcontext(new SSLContextBuilder()
-                            .loadTrustMaterial(null, (x509CertChain, authType) -> true)
-                            .build());
+                // Handle optional SSL checks
+                if (DISABLE_SSL_CHECKS) {
+                    SSLContext sslContext = SSLContextBuilder.create()
+                        .loadTrustMaterial(null, (chain, authType) -> true) // trust all
+                        .build();
+
+                    clientBuilder.setConnectionManager(PoolingHttpClientConnectionManagerBuilder.create()
+                        .setTlsSocketStrategy(ClientTlsStrategyBuilder.create()
+                            .setSslContext(sslContext)
+                            //.setHostnameVerifier(NoopHostnameVerifier.INSTANCE) // for debugging only
+                            .buildClassic())
+                        .build());
                 }
 
                 this.httpClient = clientBuilder.build();
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 throw Throwables.propagate(e);
             }
         }
@@ -201,7 +202,7 @@ public class ICloudService implements java.io.Closeable
             URI uri = uriBuilder.build();
 
             HttpPost post = new HttpPost(uri);
-            post.setEntity(new StringEntity(new Gson().toJson(params), Consts.UTF_8));
+            post.setEntity(new StringEntity(new Gson().toJson(params), StandardCharsets.UTF_8));
             populateRequestHeadersParameters(post);
 
             try (CloseableHttpResponse response = httpClient.execute(post))
@@ -271,7 +272,7 @@ public class ICloudService implements java.io.Closeable
      * should be submitted to {@link #validateManualVerificationCode(TrustedDevice, String, char[])} for verification.</p>
      *
      * <p>Note: newer devices will automatically display a verification code without manually requesting one, and that
-     *  must be submitted via {@link }.</p>
+     * must be submitted via {@link }.</p>
      *
      * @param device the device to send the verification code to.
      */
@@ -284,7 +285,7 @@ public class ICloudService implements java.io.Closeable
             URI uri = uriBuilder.build();
 
             HttpPost post = new HttpPost(uri);
-            post.setEntity(new StringEntity(new Gson().toJson(device), Consts.UTF_8.name()));
+            post.setEntity(new StringEntity(new Gson().toJson(device), StandardCharsets.UTF_8));
             populateRequestHeadersParameters(post);
 
             Map<String, Object> response = httpClient.execute(post, new JsonToMapResponseHandler());
@@ -303,8 +304,8 @@ public class ICloudService implements java.io.Closeable
     /**
      * Validates the manually requested verification code. See {@link #sendManualVerificationCode(TrustedDevice)}.
      *
-     * @param device the device the code was sent to.
-     * @param code the code.
+     * @param device   the device the code was sent to.
+     * @param code     the code.
      * @param password the user's password.
      */
     public void validateManualVerificationCode(TrustedDevice device, String code, char[] password)
@@ -324,7 +325,7 @@ public class ICloudService implements java.io.Closeable
             responseDevice.trustBrowser = true;
 
             HttpPost post = new HttpPost(uri);
-            post.setEntity(new StringEntity(new Gson().toJson(responseDevice), Consts.UTF_8));
+            post.setEntity(new StringEntity(new Gson().toJson(responseDevice), StandardCharsets.UTF_8));
             populateRequestHeadersParameters(post);
 
             Map<String, Object> response = httpClient.execute(post, new JsonToMapResponseHandler());
@@ -334,8 +335,7 @@ public class ICloudService implements java.io.Closeable
                 if (Double.valueOf(-21669.0).equals(response.get("errorCode")))
                 {
                     throw new RuntimeException("Invalid verification code");
-                }
-                else
+                } else
                 {
                     throw new IllegalStateException("Failed to verify code: " + response.get("errorMessage"));
                 }
@@ -478,7 +478,7 @@ public class ICloudService implements java.io.Closeable
      *
      * @param request the request to populate.
      */
-    public void populateRequestHeadersParameters(HttpRequestBase request)
+    public void populateRequestHeadersParameters(HttpUriRequestBase request)
     {
         request.setHeader("Origin", endPoint);
         request.setHeader("Referer", endPoint + "/");

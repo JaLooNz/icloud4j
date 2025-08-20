@@ -13,36 +13,31 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-
 package com.github.tmyroadctfig.icloud4j.util;
 
-
 import com.google.common.io.CharStreams;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.ResponseHandler;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.io.HttpClientResponseHandler;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 /**
  * A response handler which returns the response content as a string.
- *
- * @author Luke Quinane
  */
-public class StringResponseHandler implements ResponseHandler<String>
-{
+public class StringResponseHandler implements HttpClientResponseHandler<String> {
+
     @Override
-    public String handleResponse(HttpResponse response) throws IOException
-    {
+    public String handleResponse(ClassicHttpResponse response) throws IOException {
         HttpEntity respEntity = response.getEntity();
         if (respEntity != null) {
-            Reader reader = new InputStreamReader(respEntity.getContent(), Charset.forName("UTF-8"));
-            return CharStreams.toString(reader);
+            try (Reader reader = new InputStreamReader(respEntity.getContent(), StandardCharsets.UTF_8)) {
+                return CharStreams.toString(reader);
+            }
         }
-
         return null;
     }
 }

@@ -23,17 +23,17 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.cookie.Cookie;
 
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.hc.client5.http.cookie.Cookie;
+import org.apache.hc.core5.net.URIBuilder;
 
 /**
  * A node in the iCloud Drive service.
@@ -119,11 +119,12 @@ public class DriveNode
      *
      * @param outputStream the output stream to write to.
      */
-    public void downloadFileData(OutputStream outputStream)
-    {
-        try
-        {
-            URIBuilder uriBuilder = new URIBuilder(String.format("%s/ws/%s/download/by_id", driveService.getDocsServiceUrl(), nodeDetails.zone));
+    public void downloadFileData(OutputStream outputStream) {
+        try {
+            // Build the content URL lookup URI
+            URIBuilder uriBuilder = new URIBuilder(
+                String.format("%s/ws/%s/download/by_id", driveService.getDocsServiceUrl(), nodeDetails.zone)
+            );
             iCloudService.populateUriParameters(uriBuilder);
             uriBuilder.addParameter("clientMasteringNumber", "14E45");
             uriBuilder.addParameter("document_id", Iterables.getLast(Splitter.on(":").splitToList(id)));
@@ -134,22 +135,30 @@ public class DriveNode
             HttpGet contentUrlGetRequest = new HttpGet(contentUrlLookupUrl);
             iCloudService.populateRequestHeadersParameters(contentUrlGetRequest);
 
-            Map<String, Object> result = iCloudService.getHttpClient().execute(contentUrlGetRequest, new JsonToMapResponseHandler());
+            Map<String, Object> result = iCloudService.getHttpClient().execute(
+                contentUrlGetRequest,
+                new JsonToMapResponseHandler()
+            );
             Map<String, Object> dataTokenMap = (Map<String, Object>) result.get("data_token");
 
             String contentUrl = (String) dataTokenMap.get("url");
-            HttpGet contentRequest = new HttpGet(contentUrl);
 
-            try (InputStream inputStream = iCloudService.getHttpClient().execute(contentRequest).getEntity().getContent())
-            {
-                IOUtils.copyLarge(inputStream, outputStream, new byte[0x10000]);
-            }
-        }
-        catch (Exception e)
-        {
+            // Download the file
+            HttpGet contentRequest = new HttpGet(contentUrl);
+            iCloudService.populateRequestHeadersParameters(contentRequest);
+
+            iCloudService.getHttpClient().execute(contentRequest, response -> {
+                try (InputStream inputStream = response.getEntity().getContent()) {
+                    IOUtils.copyLarge(inputStream, outputStream, new byte[0x10000]);
+                }
+                return null; // HttpClientResponseHandler requires a return type
+            });
+
+        } catch (Exception e) {
             throw Throwables.propagate(e);
         }
     }
+
 
     /**
      * Gets the type.

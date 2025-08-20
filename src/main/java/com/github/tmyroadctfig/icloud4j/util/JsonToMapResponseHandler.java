@@ -18,17 +18,16 @@ package com.github.tmyroadctfig.icloud4j.util;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.StatusLine;
-import org.apache.http.client.ResponseHandler;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.io.HttpClientResponseHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
@@ -37,7 +36,7 @@ import java.util.Map;
  * @author Nick DS (me@nickdsantos.com)
  * @author Luke Quinane
  */
-public class JsonToMapResponseHandler implements ResponseHandler<Map<String,Object>>
+public class JsonToMapResponseHandler implements HttpClientResponseHandler<Map<String,Object>>
 {
     /**
      * The logger.
@@ -45,20 +44,20 @@ public class JsonToMapResponseHandler implements ResponseHandler<Map<String,Obje
     private static final Logger logger = LoggerFactory.getLogger(JsonToMapResponseHandler.class);
 
     @Override
-    public Map<String, Object> handleResponse(HttpResponse response) throws IOException
+    public Map<String, Object> handleResponse(ClassicHttpResponse response) throws IOException
     {
-        StatusLine statusLine = response.getStatusLine();
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("code: " + statusLine.getStatusCode() + "; reason: " + statusLine.getReasonPhrase());
+        int statusCode = response.getCode();
+        String reason = response.getReasonPhrase();
+        if (logger.isDebugEnabled()) {
+            logger.debug("code: {} ; reason: {}", statusCode, reason);
         }
 
         HttpEntity respEntity = response.getEntity();
-        if (respEntity != null)
-        {
+        if (respEntity != null) {
             Gson gson = new GsonBuilder().create();
-            Reader reader = new InputStreamReader(respEntity.getContent(), Charset.forName("UTF-8"));
-            return gson.<Map<String, Object>>fromJson(reader, Map.class);
+            try (Reader reader = new InputStreamReader(respEntity.getContent(), StandardCharsets.UTF_8)) {
+                return gson.fromJson(reader, Map.class);
+            }
         }
 
         return null;
