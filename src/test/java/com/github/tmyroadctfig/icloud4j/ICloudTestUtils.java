@@ -1,23 +1,21 @@
 /*
- *    Copyright 2016 Luke Quinane
+ * Copyright 2016 Luke Quinane
+ * Copyright 2025 JaLooNz
  *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and limitations under the License.
  */
 
 package com.github.tmyroadctfig.icloud4j;
 
 import com.github.tmyroadctfig.icloud4j.json.TrustedDevice;
-import org.apache.http.StatusLine;
+import org.apache.hc.core5.http.message.StatusLine;
 
 import java.util.List;
 
@@ -38,9 +36,7 @@ public class ICloudTestUtils
         String username = System.getProperty("icloud4j.test.username");
         char[] password = System.getProperty("icloud4j.test.password").toCharArray();
 
-        iCloudService.authenticate(
-            username,
-            password);
+        iCloudService.authenticate(username, password);
 
         if (iCloudService.isTwoFactorEnabled())
         {
@@ -56,8 +52,7 @@ public class ICloudTestUtils
                 String code = "";
 
                 iCloudService.validateManualVerificationCode(device, code, password);
-            }
-            else
+            } else
             {
                 StatusLine statusLine = iCloudService.getIdmsaService().authenticateViaIdmsa(username, password);
 
