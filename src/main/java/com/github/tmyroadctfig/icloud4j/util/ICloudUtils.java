@@ -9,6 +9,7 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.core5.http.ClassicHttpResponse;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.Map;
 
@@ -56,6 +57,19 @@ public class ICloudUtils {
             });
         } catch (IOException e) {
             throw new UncheckedIOException(e);
+        }
+    }
+
+
+    /**
+     * Executes a GET request and returns the response body as an InputStream.
+     * Caller is responsible for closing the InputStream.
+     */
+    public static InputStream executeStream(CloseableHttpClient client, HttpGet get) {
+        try {
+            return client.execute(get, response -> response.getEntity().getContent());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to execute HTTP GET for stream", e);
         }
     }
 }

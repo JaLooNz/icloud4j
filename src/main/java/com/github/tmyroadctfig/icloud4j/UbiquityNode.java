@@ -59,10 +59,10 @@ public class UbiquityNode
     /**
      * Creates a new node.
      *
-     * @param iCloudService the iCloud service.
+     * @param iCloudService   the iCloud service.
      * @param ubiquityService the service reference.
-     * @param id the ID.
-     * @param nodeDetails the details for the node.
+     * @param id              the ID.
+     * @param nodeDetails     the details for the node.
      */
     public UbiquityNode(ICloudService iCloudService, UbiquityService ubiquityService, String id, UbiquityNodeDetails nodeDetails)
     {
@@ -94,7 +94,7 @@ public class UbiquityNode
         }
         catch (Exception e)
         {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -105,20 +105,17 @@ public class UbiquityNode
      */
     public void downloadFileData(OutputStream outputStream)
     {
-        try
-        {
-            String url = String.format("%s/ws/%s/%s/%s", ubiquityService.getServiceUrl(), iCloudService.getSessionId(), "file", id);
-            HttpGet httpGet = new HttpGet(url);
-            iCloudService.populateRequestHeadersParameters(httpGet);
+        String url = String.format("%s/ws/%s/%s/%s", ubiquityService.getServiceUrl(), iCloudService.getSessionId(), "file", id);
+        HttpGet httpGet = new HttpGet(url);
+        iCloudService.populateRequestHeadersParameters(httpGet);
 
-            try (InputStream inputStream = iCloudService.getHttpClient().execute(httpGet).getEntity().getContent())
-            {
-                IOUtils.copyLarge(inputStream, outputStream, new byte[0x10000]);
-            }
+        try (InputStream inputStream = ICloudUtils.executeStream(iCloudService.getHttpClient(), httpGet))
+        {
+            IOUtils.copyLarge(inputStream, outputStream, new byte[0x10000]);
         }
         catch (Exception e)
         {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
