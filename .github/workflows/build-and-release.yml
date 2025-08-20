@@ -1,0 +1,112 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: eclipse-temurin:17-jdk
+
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y git osslsigncode
+
+      - uses: actions/checkout@v3
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build JAR
+        run: ./gradlew assemble
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            build/libs/icloud4j-*.jar
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
+      - name: List downloaded files
+        run: |
+          echo "Files in workspace:"
+          find . -type f
+
+      - name: Install GitHub CLI
+        run: |
+          sudo apt update
+          sudo apt install -y gh
+
+      - name: Configure Git safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Delete existing release and tag (if any)
+        run: |
+          TAG=${GITHUB_REF##*/}
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Deleting release $TAG"
+            gh release delete "$TAG" --yes
+          fi
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep "$TAG"; then
+            echo "Deleting remote tag $TAG"
+            git push origin --delete "$TAG"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get tag message for release notes
+        id: tag_message
+        run: |
+          TAG=${GITHUB_REF##*/}
+          MSG=$(git for-each-ref refs/tags/$TAG --format='%(contents)')
+          if [ -z "$MSG" ]; then
+            MSG="$TAG"
+          fi
+          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$MSG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: ${{ steps.tag_message.outputs.release_notes }}
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts to release
+        run: |
+          FILES=()
+          while IFS= read -r jar; do
+            FILES+=("$jar")
+          done < <(find . -name '*.jar')
+          
+          echo "Uploading files:"
+          for f in "${FILES[@]}"; do echo " - $f"; done
+
+          if (( ${#FILES[@]} > 0 )); then
+            gh release upload ${{ github.ref_name }} "${FILES[@]}" --clobber
+          else
+            echo "⚠️ No files to upload."
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
