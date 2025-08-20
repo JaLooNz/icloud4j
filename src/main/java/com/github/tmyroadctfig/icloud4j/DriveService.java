@@ -58,7 +58,7 @@ public class DriveService
     {
         HttpPost post = new HttpPost(serviceRoot + "/retrieveItemDetailsInFolders");
         iCloudService.populateRequestHeadersParameters(post);
-        post.addHeader("clientMasteringNumber", "14E45");
+        post.addHeader("clientMasteringNumber", iCloudService.getClientBuildNumber());
         post.setEntity(new StringEntity(
             String.format("[{\"drivewsid\":\"%s\",\"partialData\":false}]", nodeId),
             ContentType.APPLICATION_JSON

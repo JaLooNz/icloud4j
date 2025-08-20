@@ -106,6 +106,11 @@ public class ICloudService implements java.io.Closeable
     private String dsid;
 
     /**
+     * Client build number.
+     */
+    private String clientBuildNumber = "14E45";
+
+    /**
      * Creates a new iCloud service instance.
      *
      * @param clientId the client ID.
@@ -495,6 +500,16 @@ public class ICloudService implements java.io.Closeable
     public void close() throws IOException
     {
         httpClient.close();
+    }
+
+    public String getClientBuildNumber()
+    {
+        return this.clientBuildNumber;
+    }
+
+    public void setClientBuildNumber(String clientBuildNumber)
+    {
+        this.clientBuildNumber = clientBuildNumber;
     }
 }
 

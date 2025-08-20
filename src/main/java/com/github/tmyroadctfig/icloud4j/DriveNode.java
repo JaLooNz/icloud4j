@@ -124,7 +124,7 @@ public class DriveNode
                 String.format("%s/ws/%s/download/by_id", driveService.getDocsServiceUrl(), nodeDetails.zone)
             );
             iCloudService.populateUriParameters(uriBuilder);
-            uriBuilder.addParameter("clientMasteringNumber", "14E45");
+            uriBuilder.addParameter("clientMasteringNumber", iCloudService.getClientBuildNumber());
             uriBuilder.addParameter("document_id", Iterables.getLast(Splitter.on(":").splitToList(id)));
             uriBuilder.addParameter("token", downloadUrlToken);
             URI contentUrlLookupUrl = uriBuilder.build();
